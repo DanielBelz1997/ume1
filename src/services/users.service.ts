@@ -13,17 +13,19 @@ class UserService {
 
   static async create(
     data: Partial<IUser>,
-    userId?: Types.ObjectId
+    actingUserId?: Types.ObjectId,
+    method: "POST" | "PUT" | "PATCH" = "POST"
   ): Promise<IUser> {
     const user = await User.create(data);
 
-    if (user) {
+    if (user && actingUserId) {
       await AuditLogService.logAuditEntry(
         "CREATE",
         "User",
         user._id as Types.ObjectId,
         data,
-        userId
+        actingUserId,
+        method
       );
     }
 
@@ -33,36 +35,56 @@ class UserService {
   static async update(
     id: string,
     data: Partial<IUser>,
-    userId?: Types.ObjectId
-  ): Promise<IUser | null> {
+    actingUserId?: Types.ObjectId,
+    method: "PUT" | "PATCH" = "PUT",
+    parentAuditLogId?: Types.ObjectId
+  ): Promise<{ user: IUser | null; auditLog?: any }> {
     const user = await User.findByIdAndUpdate(id, data, { new: true });
 
-    if (user) {
-      await AuditLogService.logAuditEntry(
-        "UPDATE",
-        "User",
-        user._id as Types.ObjectId,
-        data,
-        userId
-      );
+    let auditLog;
+    if (user && actingUserId) {
+      if (parentAuditLogId) {
+        // Create linked audit log
+        auditLog = await AuditLogService.logLinkedAuditEntry(
+          "UPDATE",
+          "User",
+          user._id as Types.ObjectId,
+          data,
+          actingUserId,
+          parentAuditLogId,
+          method
+        );
+      } else {
+        // Create regular audit log
+        auditLog = await AuditLogService.logAuditEntry(
+          "UPDATE",
+          "User",
+          user._id as Types.ObjectId,
+          data,
+          actingUserId,
+          method
+        );
+      }
     }
 
-    return user;
+    return { user, auditLog };
   }
 
   static async delete(
     id: string,
-    userId?: Types.ObjectId
+    actingUserId?: Types.ObjectId,
+    method: "DELETE" = "DELETE"
   ): Promise<IUser | null> {
     const user = await User.findByIdAndDelete(id);
 
-    if (user) {
+    if (user && actingUserId) {
       await AuditLogService.logAuditEntry(
         "DELETE",
         "User",
         user._id as Types.ObjectId,
         user,
-        userId
+        actingUserId,
+        method
       );
     }
 
