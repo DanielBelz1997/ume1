@@ -21,7 +21,6 @@ class AuditLogService {
         userId,
         method,
         parent,
-        timestamp: new Date(),
       });
 
       return auditLog;
