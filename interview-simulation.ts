@@ -234,8 +234,6 @@ export class AuditController {
       res.status(500).json({ message: "failed to create audit log", cause: e });
     }
   }
-
-  static async;
 }
 
 /**
